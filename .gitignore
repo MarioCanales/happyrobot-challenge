@@ -2,3 +2,6 @@
 /venv
 sql_app.db
 __pycache__/
+*.db
+*.sqlite
+.DS_Store
