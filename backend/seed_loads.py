@@ -25,8 +25,8 @@ def seed_data():
     loads_data = [
         {
             "load_id": "L1001",
-            "origin": "Dallas, TX",
-            "destination": "Phoenix, AZ",
+            "origin": "Dallas",
+            "destination": "Phoenix",
             "pickup_datetime": now + timedelta(days=1),
             "delivery_datetime": now + timedelta(days=2),
             "equipment_type": "Van",
@@ -41,8 +41,8 @@ def seed_data():
         },
         {
             "load_id": "L1002",
-            "origin": "Chicago, IL",
-            "destination": "Atlanta, GA",
+            "origin": "Chicago",
+            "destination": "Atlanta",
             "pickup_datetime": now + timedelta(days=3),
             "delivery_datetime": now + timedelta(days=4),
             "equipment_type": "Reefer",
@@ -57,8 +57,8 @@ def seed_data():
         },
         {
             "load_id": "L1003",
-            "origin": "Miami, FL",
-            "destination": "Houston, TX",
+            "origin": "Miami",
+            "destination": "Houston",
             "pickup_datetime": now + timedelta(days=5),
             "delivery_datetime": now + timedelta(days=6),
             "equipment_type": "Flatbed",
@@ -76,7 +76,6 @@ def seed_data():
     for item in loads_data:
         load = Load(**item)
         db.add(load)
-    
     db.commit()
     print(f"Seeded {len(loads_data)} loads successfully!")
     db.close()
