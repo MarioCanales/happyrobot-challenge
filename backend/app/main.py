@@ -21,7 +21,7 @@ class LoadResponse(BaseModel):
     origin: str
     destination: str
     loadboard_rate: float
-    commodity: str
+    commodity_type: str
     equipment_type: str
     status: str
     
