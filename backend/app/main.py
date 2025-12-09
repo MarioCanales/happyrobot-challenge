@@ -20,6 +20,8 @@ class LoadResponse(BaseModel):
     load_id: str
     origin: str
     destination: str
+    pickup_datetime = str
+    delivery_datetime = str
     loadboard_rate: float
     commodity_type: str
     equipment_type: str
