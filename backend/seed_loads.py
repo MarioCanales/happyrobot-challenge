@@ -36,6 +36,7 @@ def seed_data():
             "num_of_pieces": 20,
             "miles": 1065.0,
             "dimensions": "Standard",
+            "status": "available",
             "notes": "Driver must strap load. FCFS."
         },
         {
@@ -51,6 +52,7 @@ def seed_data():
             "num_of_pieces": 1200,
             "miles": 716.0,
             "dimensions": "48x40 Pallets",
+            "status": "available",
             "notes": "-10 degrees continuous."
         },
         {
@@ -66,6 +68,7 @@ def seed_data():
             "num_of_pieces": 10,
             "miles": 1180.0,
             "dimensions": "48ft Length",
+            "status": "available",
             "notes": "Tarps required."
         }
     ]

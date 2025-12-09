@@ -41,6 +41,7 @@ class Load(Base):
     num_of_pieces = Column(Integer)
     miles = Column(Float)
     dimensions = Column(String)
+    status = Column(String, default="available") # available, booked
     notes = Column(Text, nullable=True)
 
 class CallLog(Base):
