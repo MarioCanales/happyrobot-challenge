@@ -20,7 +20,7 @@ class LoadResponse(BaseModel):
     load_id: str
     origin: str
     destination: str
-    rate: float
+    loadboard_rate: float
     commodity: str
     equipment_type: str
     status: str
