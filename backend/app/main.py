@@ -23,6 +23,7 @@ class LoadResponse(BaseModel):
     rate: float
     commodity: str
     equipment_type: str
+    status: str
     
     class Config:
         orm_mode = True # To work with ORM objects directly Pydantic <-> SQLAlchemy
@@ -37,6 +38,12 @@ class NegotiationResponse(BaseModel):
     decision: str  # "accept", "counter", "reject"
     counter_amount: Optional[float] = None
     message: str
+
+class CallSummaryRequest(BaseModel):
+    session_id: str
+    sentiment: str
+    outcome: str     
+    transcript: str    
 
 app = FastAPI(
     title="HappyRobot Inbound Carrier API",
@@ -82,7 +89,7 @@ def search_loads(
     query = db.query(Load).filter(Load.status == "available")
     
     if origin:
-        # Case-insensitive partial match
+        # Case-insensitive partial match, should we give more flexibility?
         query = query.filter(Load.origin.ilike(f"%{origin}%"))
     
     if destination:
@@ -91,6 +98,7 @@ def search_loads(
     loads = query.all()
     return loads
 
+# --- Endpoint 3: Negotiate ---
 @app.post("/negotiate", response_model=NegotiationResponse, dependencies=[Depends(get_api_key)])
 def negotiate_offer(
     request: NegotiationRequest, 
@@ -172,7 +180,33 @@ def negotiate_offer(
         message=message
     )
 
-# --- Endpoint: Fetch Call Logs for Dashboard ---
+# --- Endpoint 4: Save Call Summary (Post-Call) ---
+@app.post("/call-summary", dependencies=[Depends(get_api_key)])
+def save_call_summary(
+    request: CallSummaryRequest, 
+    db: Session = Depends(get_db)
+):
+    """
+    Receives final analysis from HappyRobot after call ends.
+    Updates the CallLog with the AI's classification and transcript.
+    """
+    call_log = db.query(CallLog).filter(CallLog.session_id == request.session_id).first()
+    
+    if not call_log:
+        # If for some reason the call started without a negotiate step
+        call_log = CallLog(session_id=request.session_id, outcome=request.outcome)
+        db.add(call_log)
+    
+    # Update with the platform's advanced analysis
+    call_log.sentiment = request.sentiment
+    call_log.outcome = request.outcome
+    call_log.transcription = request.transcript
+    # call_log.recording_url = request.recording_url # (Optional if you add this column)
+    
+    db.commit()
+    return {"status": "updated"}
+
+# --- Dashboard specific Endpoint: Fetch Call Logs for Dashboard ---
 # TODO: separate auth? To block this to other callers
 @app.get("/logs", dependencies=[Depends(get_api_key)])
 def get_call_logs(db: Session = Depends(get_db)):
