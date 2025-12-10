@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 # Copy the 'app' folder and 'seed_loads.py' for populating the DB with mock data
 COPY ./app /code/app
 COPY ./seed_loads.py /code/seed_loads.py
+COPY ./populate_metrics.py /code/populate_metrics.py
 
 # env file to be modified manually for this POC
 RUN touch .env
