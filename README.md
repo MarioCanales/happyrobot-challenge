@@ -54,11 +54,11 @@ pip install -r dashboard/requirements.txt
 
 
 ### Database Seeding
-Initialize the SQLite database with the "Context" genai generated load data:
-
+Initialize the SQLite database with some mock data.
 ```
 # Run from the project root
 python backend/seed_loads.py
+python backend/populate_metrics.py
 ```
 
 ## 🏃‍♂️ Running the Services
