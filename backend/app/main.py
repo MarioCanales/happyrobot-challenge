@@ -107,8 +107,6 @@ def negotiate_offer(
     request: NegotiationRequest, 
     db: Session = Depends(get_db)
 ):
-    #TODO: this is a first approach, we need to revisit this as the core business decission logic!
-
     # Fail fast if the load isn't found
     load = db.query(Load).filter(Load.load_id == request.load_id).first()
     if not load:
@@ -116,7 +114,7 @@ def negotiate_offer(
     
     # --- Strategy Setup ---
     target = load.loadboard_rate
-    floor = target * 0.85  # 15% margin
+    floor = target * 0.85  # 15% margin floor
     offer = request.offer_amount
     
     # --- Negotiation Logic ---
@@ -124,43 +122,52 @@ def negotiate_offer(
     counter = None
     message = ""
 
+    # --- 1: Offer meets or exceeds target (instant accept) ---
     if offer >= target:
-        # Carrier offered our asking price (or more)
         decision = "accept"
-        message = f"That works. We can book it at ${offer}."
         counter = offer
+        message = f"That works. We can book it at ${offer}."
 
+    # --- 2: Offer is below the hard floor (reject + return target) ---
     elif offer < floor:
-        # Offer is below our hard floor
         decision = "reject"
-        message = f"That is too low. The best I can do is ${target}."
         counter = target
+        message = f"That is too low. The best I can do is ${target}."
 
+    # --- 3: Offer is between floor and target (negotiate) ---
     else:
-        # Negotiation range: Split the difference
         midpoint = (target + offer) / 2
-        counter = round(midpoint, -1) # Round to nearest 10 for simplicity
-        
-        # If we are within $20 of their offer, just accept it to close the deal
-        if counter <= offer + 20:
-            decision = "accept"
-            message = f"I can make that work at ${offer}. Let's book it."
-            counter = offer
-        else:
-            decision = "counter"
-            message = f"I can't do ${offer}, but I can meet you at ${counter}."
+        counter = round(midpoint, -1)  # Round to nearest 10
 
+        # ❗ Prevent a downward counter-offer (the bug you hit)
+        if counter < offer:
+            # If midpoint math says to go LOWER, simply accept the carrier’s offer
+            decision = "accept"
+            counter = offer
+            message = f"I can make that work at ${offer}. Let's book it."
+        else:
+            # Normal counter situation
+            # If counter is within $20 of their offer, accept it
+            if counter <= offer + 20:
+                decision = "accept"
+                counter = offer
+                message = f"I can make that work at ${offer}. Let's book it."
+            else:
+                decision = "counter"
+                message = f"I can't do ${offer}, but I can meet you at ${counter}."
+
+    # --- Update load status if accepted ---
     if decision == "accept":
-        # Change the status of the SQLAlchemy Load object
         load.status = "booked"
 
-    db.commit() # Save any status changes
+    db.commit()  # Save DB changes
     
     return NegotiationResponse(
         decision=decision, 
         counter_amount=counter, 
         message=message
     )
+
 
 @app.post("/call-summary", dependencies=[Depends(get_api_key)])
 def save_call_summary(
@@ -212,3 +219,7 @@ def get_call_logs(db: Session = Depends(get_db)):
     """
     logs = db.query(CallLog).order_by(CallLog.created_at.desc()).all()
     return logs
+
+@app.get("/loads/all", dependencies=[Depends(get_api_key)])
+def get_all_loads(db: Session = Depends(get_db)):
+    return db.query(Load).all()

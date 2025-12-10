@@ -10,7 +10,7 @@ API_KEY_NAME = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 # Get the valid key from environment variables
-expected_api_key = os.getenv("SERVICE_API_KEY", "dev-secret-key")
+expected_api_key = os.getenv("SERVICE_API_KEY", "my-super-secret-password")
 
 async def get_api_key(api_key_header: str = Security(api_key_header)):
     if api_key_header == expected_api_key:
