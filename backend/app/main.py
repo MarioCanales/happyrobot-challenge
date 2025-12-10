@@ -139,22 +139,14 @@ def negotiate_offer(
         midpoint = (target + offer) / 2
         counter = round(midpoint, -1)  # Round to nearest 10
 
-        # ❗ Prevent a downward counter-offer (the bug you hit)
-        if counter < offer:
-            # If midpoint math says to go LOWER, simply accept the carrier’s offer
+        # If counter is very close to the offer, accept it
+        if counter <= offer + 20:
             decision = "accept"
             counter = offer
             message = f"I can make that work at ${offer}. Let's book it."
         else:
-            # Normal counter situation
-            # If counter is within $20 of their offer, accept it
-            if counter <= offer + 20:
-                decision = "accept"
-                counter = offer
-                message = f"I can make that work at ${offer}. Let's book it."
-            else:
-                decision = "counter"
-                message = f"I can't do ${offer}, but I can meet you at ${counter}."
+            decision = "counter"
+            message = f"I can't do ${offer}, but I can meet you at ${counter}."
 
     # --- Update load status if accepted ---
     if decision == "accept":
@@ -168,7 +160,7 @@ def negotiate_offer(
         message=message
     )
 
-
+# --- Endpoint 4: Save Call Summary ---
 @app.post("/call-summary", dependencies=[Depends(get_api_key)])
 def save_call_summary(
     request: CallSummaryRequest, 
