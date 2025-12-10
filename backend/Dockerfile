@@ -12,6 +12,7 @@ COPY ./seed_loads.py /code/seed_loads.py
 RUN touch .env
 # Seed the database with initial load data
 RUN python seed_loads.py
+RUN python populate_metrics.py
 
 EXPOSE 80
 # Run app.main when the container launches

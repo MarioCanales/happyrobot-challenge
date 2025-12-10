@@ -41,8 +41,8 @@ if not df.empty:
     booked_loads = len(df[df['outcome'] == 'booked'])
     failed_negs = len(df[df['outcome'] == 'negotiation_failed'])
     
-    # Revenue Calculation (Sum of agreed rates)
-    revenue = df['agreed_rate'].sum() if 'agreed_rate' in df.columns else 0
+    # Revenue Calculation (Sum of rates)
+    revenue = df['offered_rate'].sum() if 'offered_rate' in df.columns else 0
     
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Calls", total_calls)
@@ -73,7 +73,7 @@ if not df.empty:
 
     # --- Raw Data Table ---
     st.subheader("Recent Call Logs")
-    st.dataframe(df[['created_at', 'carrier_mc', 'load_id_ref', 'offered_rate', 'agreed_rate', 'outcome', 'sentiment']])
+    st.dataframe(df[['created_at', 'carrier_mc', 'load_id_ref', 'offered_rate', 'outcome', 'sentiment']])
 
 else:
     st.info("No call data available yet. Waiting for calls...")
