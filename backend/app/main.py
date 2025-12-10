@@ -135,13 +135,11 @@ def negotiate_offer(
         decision = "reject"
         message = f"That is too low. The best I can do is ${target}."
         counter = target
-        call_log.sentiment = "negative"
 
     else:
         # Negotiation range: Split the difference
         midpoint = (target + offer) / 2
-        counter = round(midpoint, -1) # Round to nearest $10 for a clean number
-        # TODO: refine rounding logic if needed - do we actually want to pretend we are humans?
+        counter = round(midpoint, -1) # Round to nearest 10 for simplicity
         
         # If we are within $20 of their offer, just accept it to close the deal
         if counter <= offer + 20:
@@ -152,16 +150,11 @@ def negotiate_offer(
             decision = "counter"
             message = f"I can't do ${offer}, but I can meet you at ${counter}."
 
-    # --- Finalize State ---
-    # TODO: when integrating with HappyRobot, we need to get call sentiment from there. Not based on accept/reject logic.
     if decision == "accept":
-        call_log.outcome = "booked"
-        call_log.agreed_rate = counter
-        call_log.sentiment = "positive"
-    elif decision == "reject":
-        call_log.outcome = "negotiation_failed"
+        # Change the status of the SQLAlchemy Load object
+        load.status = "booked"
 
-    db.commit()
+    db.commit() # Save any status changes
     
     return NegotiationResponse(
         decision=decision, 
@@ -169,17 +162,6 @@ def negotiate_offer(
         message=message
     )
 
-# --- Endpoint 4: Save Call Summary (Post-Call) ---
-@app.post("/call-summary", dependencies=[Depends(get_api_key)])
-def save_call_summary(
-    request: CallSummaryRequest, 
-    db: Session = Depends(get_db)
-):
-    """
-    Receives final analysis from HappyRobot after call ends.
-    Updates the CallLog with the AI's classification and transcript.
-    """
-   # --- Endpoint 4: Save Call Summary (Post-Call) ---
 @app.post("/call-summary", dependencies=[Depends(get_api_key)])
 def save_call_summary(
     request: CallSummaryRequest, 
@@ -187,20 +169,28 @@ def save_call_summary(
 ):
     """
     Receives final analysis from HappyRobot after call ends and creates the complete CallLog record.
+    The offered_rate is stored as NULL unless the outcome is 'Success'.
     """
-    # Create a new CallLog object using all data provided in the request
+    # 1. Prepare offered_rate value
+    final_rate = request.offered_rate
+    
+    # Validation logic: If the outcome is NOT 'booked', set the final rate to None (NULL in DB)
+    if request.outcome != "Success":
+        final_rate = None
+        
+    # 2. Create a new CallLog object
     new_call_log = CallLog(
         session_id=request.session_id,
         carrier_mc=request.carrier_mc,
         load_id_ref=request.load_id_ref,
-        offered_rate=request.offered_rate,
+        offered_rate=final_rate, 
         sentiment=request.sentiment,
         outcome=request.outcome
     )
     
     db.add(new_call_log)
     
-    # Check for duplicates based on unique session_id
+    # 3. Commit and Error Handling
     try:
         db.commit()
     except Exception as e:
@@ -209,7 +199,9 @@ def save_call_summary(
         if "UNIQUE constraint failed" in str(e):
             raise HTTPException(status_code=409, detail=f"Call summary for session ID {request.session_id} already exists.")
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        
     return {"status": "created", "session_id": request.session_id}
+
 
 # --- Dashboard specific Endpoint: Fetch Call Logs for Dashboard ---
 # TODO: separate auth? To block this to other callers
