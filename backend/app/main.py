@@ -20,8 +20,8 @@ class LoadResponse(BaseModel):
     load_id: str
     origin: str
     destination: str
-    pickup_datetime = str
-    delivery_datetime = str
+    pickup_datetime : str
+    delivery_datetime : str
     loadboard_rate: float
     commodity_type: str
     equipment_type: str
@@ -40,12 +40,12 @@ class NegotiationResponse(BaseModel):
     message: str
 
 class CallSummaryRequest(BaseModel):
-    session_id = str
+    session_id : str
     carrier_mc: Optional[str] = None # Assuming MC might not always be captured
     load_id_ref: Optional[str] = None 
     offered_rate: Optional[float] = None
-    sentiment = str
-    outcome = str
+    sentiment : str
+    outcome : str
 
 app = FastAPI(
     title="HappyRobot Inbound Carrier API",
