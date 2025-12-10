@@ -28,10 +28,13 @@ happyrobot-challenge/
 │   │   ├── auth.py         # API Key Security
 │   │   └── fmcsa_service.py # Carrier Verification Logic
 │   ├── seed_loads.py       # Script to populate mock data
+│   ├── populate_metrics.py  # Script to populate mock data in metrics
+│   ├── Dockerfile  
 │   └── requirements.txt
 ├── dashboard/              # Sales Dashboard
 │   ├── app.py              # Dashboard UI Logic
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── Dockerfile  
 └── README.md
 ```
 
@@ -48,21 +51,7 @@ pip install -r backend/requirements.txt
 pip install -r dashboard/requirements.txt
 ```
 
-### Environment Configuration
-Create a .env file in the backend/ directory with the following credentials:
 
-```
-# backend/.env
-SERVICE_API_KEY=
-FMCSA_API_KEY
-FMCSA_BASE_URL=
-```
-Create a .env file in the dashboard/ directory:
-```
-# dashboard/.env
-BACKEND_URL=
-SERVICE_API_KEY=
-```
 
 ### Database Seeding
 Initialize the SQLite database with the "Context" genai generated load data:
@@ -73,16 +62,15 @@ python backend/seed_loads.py
 ```
 
 ## 🏃‍♂️ Running the Services
-You will need two terminal windows running simultaneously.
+You will need two terminal windows running simultaneously. You don't need to create .env since the environment variable fallbacks worksin local.
 
 Terminal 1: Start the API
-
 ```
 source venv/bin/activate
 uvicorn backend.app.main:app --reload
 ```
 
-Health Check: `http://127.0.0.1:8000/health`
+Do a GET to the health Check endpoint to validate it worked: `http://localhost:8000/health`
 
 Terminal 2: Start the Dashboard
 
@@ -90,11 +78,92 @@ Terminal 2: Start the Dashboard
 source venv/bin/activate
 streamlit run dashboard/app.py
 ```
+Dashboard UI: `http://localhost:8501/`
 
-Dashboard UI: `http://localhost:8501`
+Your service is up and running.
 
-## 🧠 Key Features & Logic [PENDING]
-TO ADD
-## 🧠 Testing & Deployment [PENDING]
-For finging MC numbers we can find them here: https://safer.fmcsa.dot.gov/keywordx.asp?searchstring=%2ATRANSPORT%2A&SEARCHTYPE=
-TO ADD
+## 🧠 Key Features & Logic
+
+This POC automates inbound carrier calls using an AI agent connected to a FastAPI backend and a Streamlit dashboard.
+
+---
+
+### 🔐 Secure API (FastAPI)
+
+All operational endpoints require an API Key header  
+(`X-API-Key` header).
+
+---
+
+### 🛂 Carrier Verification
+
+**POST /verify-carrier**  
+Validates a carrier's MC number using the FMCSA SAFER API and ensures they are active before negotiation.
+
+---
+
+### 📦 Load Search
+
+**GET /loads** — returns only loads with `status="available"`  
+**GET /loads/all** — returns *all* loads (used by the dashboard)
+
+Supports filtering by origin/destination.
+
+---
+
+### 🤝 Automated Negotiation Engine
+
+**POST /negotiate**
+
+Simple POC with following rules:
+- Accept if offer ≥ loadboard rate  
+- Reject if offer < 85% of rate  
+- Otherwise counter with a midpoint amount  
+- Auto-accept when close to target  
+- When accepted, load becomes `"booked"`
+
+---
+
+###  ☎️ Call Summary Logging
+
+**POST /call-summary**
+Used to power analytics metrics. Endpoint to be called after a call ends.
+
+---
+
+### 📊 Analytics Dashboard (Streamlit)
+Consumes `/logs` and `/loads/all`.
+
+Features:
+- KPIs: calls, bookings, failures, revenue  
+- Outcome pie chart  
+- Sentiment bar chart  
+- Load table with toggle: **Available** / **Unavailable**  
+- Recent call activity table  
+
+---
+
+### 🔗 FMCSA Integration
+Carrier MC numbers are validated through the FMCSA SAFER API to ensure only compliant carriers enter the negotiation workflow.
+
+## 🧠 Testing & Deployment
+For finging MC numbers and test FMCSA API you can search here: https://safer.fmcsa.dot.gov/keywordx.asp?searchstring=%2ATRANSPORT%2A&SEARCHTYPE=
+
+For deploying firs create a .env file in the backend/ directory with the following credentials:
+
+```
+# backend/.env
+SERVICE_API_KEY=
+FMCSA_API_KEY
+FMCSA_BASE_URL=
+```
+Then go to the cloud of your choice and configure the entry point to the backend dockerfile. 
+After deploying backend, fetch the URL and Create a .env file in the dashboard/ directory with the following credentials
+```
+# dashboard/.env
+BACKEND_URL=
+SERVICE_API_KEY=
+```
+Then go again to the cloud and configure the entry point to the dashboard dockerfile. You can access now the dashboard through the link provided by the cloud
+
+_DEVELOPED BY MARIO CANALES TORRES_
