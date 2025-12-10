@@ -50,11 +50,8 @@ class CallLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String, unique=True, index=True) # From HappyRobot
     carrier_mc = Column(String, index=True)
-    carrier_phone = Column(String)
-    load_id_ref = Column(String) # Which load were they discussing?
+    load_id_ref = Column(String)
     offered_rate = Column(Float, nullable=True)
-    agreed_rate = Column(Float, nullable=True)
     sentiment = Column(String, nullable=True) # positive, neutral, negative
     outcome = Column(String) # booked, negotiation_failed, hangup
-    transcription = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

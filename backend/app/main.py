@@ -33,8 +33,6 @@ class LoadResponse(BaseModel):
 class NegotiationRequest(BaseModel):
     load_id: str
     offer_amount: float
-    session_id: str  # Unique ID for this call from HappyRobot
-    carrier_mc: Optional[str] = "Unknown" 
 
 class NegotiationResponse(BaseModel):
     decision: str  # "accept", "counter", "reject"
@@ -42,10 +40,12 @@ class NegotiationResponse(BaseModel):
     message: str
 
 class CallSummaryRequest(BaseModel):
-    session_id: str
-    sentiment: str
-    outcome: str     
-    transcript: str    
+    session_id = str
+    carrier_mc: Optional[str] = None # Assuming MC might not always be captured
+    load_id_ref: Optional[str] = None 
+    offered_rate: Optional[float] = None
+    sentiment = str
+    outcome = str
 
 app = FastAPI(
     title="HappyRobot Inbound Carrier API",
@@ -118,20 +118,6 @@ def negotiate_offer(
     floor = target * 0.85  # 15% margin
     offer = request.offer_amount
     
-    # --- Session Tracking ---
-    # Get existing log or start a new one
-    call_log = db.query(CallLog).filter(CallLog.session_id == request.session_id).first()
-    if not call_log:
-        call_log = CallLog(
-            session_id=request.session_id,
-            load_id_ref=request.load_id,
-            carrier_mc=request.carrier_mc,
-            outcome="negotiating"
-        )
-        db.add(call_log)
-    
-    call_log.offered_rate = offer
-
     # --- Negotiation Logic ---
     decision = "reject"
     counter = None
@@ -192,21 +178,37 @@ def save_call_summary(
     Receives final analysis from HappyRobot after call ends.
     Updates the CallLog with the AI's classification and transcript.
     """
-    call_log = db.query(CallLog).filter(CallLog.session_id == request.session_id).first()
+   # --- Endpoint 4: Save Call Summary (Post-Call) ---
+@app.post("/call-summary", dependencies=[Depends(get_api_key)])
+def save_call_summary(
+    request: CallSummaryRequest, 
+    db: Session = Depends(get_db)
+):
+    """
+    Receives final analysis from HappyRobot after call ends and creates the complete CallLog record.
+    """
+    # Create a new CallLog object using all data provided in the request
+    new_call_log = CallLog(
+        session_id=request.session_id,
+        carrier_mc=request.carrier_mc,
+        load_id_ref=request.load_id_ref,
+        offered_rate=request.offered_rate,
+        sentiment=request.sentiment,
+        outcome=request.outcome
+    )
     
-    if not call_log:
-        # If for some reason the call started without a negotiate step
-        call_log = CallLog(session_id=request.session_id, outcome=request.outcome)
-        db.add(call_log)
+    db.add(new_call_log)
     
-    # Update with the platform's advanced analysis
-    call_log.sentiment = request.sentiment
-    call_log.outcome = request.outcome
-    call_log.transcription = request.transcript
-    # call_log.recording_url = request.recording_url # (Optional if you add this column)
-    
-    db.commit()
-    return {"status": "updated"}
+    # Check for duplicates based on unique session_id
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # If the session_id already exists (due to unique constraint), return an error
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=409, detail=f"Call summary for session ID {request.session_id} already exists.")
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    return {"status": "created", "session_id": request.session_id}
 
 # --- Dashboard specific Endpoint: Fetch Call Logs for Dashboard ---
 # TODO: separate auth? To block this to other callers
