@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException
 from .auth import get_api_key
 from .database import engine, Base
@@ -20,8 +21,8 @@ class LoadResponse(BaseModel):
     load_id: str
     origin: str
     destination: str
-    pickup_datetime : str
-    delivery_datetime : str
+    pickup_datetime : datetime
+    delivery_datetime : datetime
     loadboard_rate: float
     commodity_type: str
     equipment_type: str
@@ -91,7 +92,7 @@ def search_loads(
     query = db.query(Load).filter(Load.status == "available")
     
     if origin:
-        # Case-insensitive partial match, should we give more flexibility?
+        # Case-insensitive partial match
         query = query.filter(Load.origin.ilike(f"%{origin}%"))
     
     if destination:
